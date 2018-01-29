@@ -5,7 +5,7 @@ import re
 from slackclient import SlackClient
 
 
-slack_client = SlackClient('xoxb-300552507008-8yF9FyXQUcWFRrTHVsn9B0Zc')
+slack_client = SlackClient('')          #Initialize with OAuth token
 
 timekeeper_id = None
 
