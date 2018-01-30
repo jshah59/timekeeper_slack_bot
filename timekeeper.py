@@ -55,7 +55,7 @@ def handle_command(command, channel):
     response = None
 
     if command.startswith("add_date") or command.startswith("add_event") or command.startswith("add_time"):
-        words = command.split(" ")
+        words = command.split()
         if(len(words) is not 3):
             response = "Not sure what to do here. Try again with this format: 'add_date [event_name] [MM/DD/YYYY]' or 'add_date [MM/DD/YYY] [event_name]"
         else:
