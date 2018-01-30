@@ -5,6 +5,7 @@ from slackclient import SlackClient
 import schedule
 
 
+
 slack_client = SlackClient('')
 
 timekeeper_id = None
