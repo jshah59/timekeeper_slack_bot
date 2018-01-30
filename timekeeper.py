@@ -1,11 +1,11 @@
-import os
 import time
-import datetime
+from datetime import datetime
 import re
 from slackclient import SlackClient
+import schedule
 
 
-slack_client = SlackClient('xoxb-300552507008-8yF9FyXQUcWFRrTHVsn9B0Zc')
+slack_client = SlackClient('')
 
 timekeeper_id = None
 
@@ -15,6 +15,8 @@ EXAMPLE_COMMAND = "do"
 MENTION_REGEX = "^<@(|[WU].+)>(.*)"
 
 times_to_keep = []
+
+ch = ""
 
 # Following 3 methods taken from tutorial at https://www.fullstackpython.com/blog/build-first-slack-bot-python.html
 
@@ -50,36 +52,35 @@ def handle_command(command, channel):
 
     # Finds and executes the given command, filling in response
     response = None
-    # This is where you start to implement more commands!
-    if command.startswith(EXAMPLE_COMMAND):
-        response = "Sure...write some more code then I can do that!"
 
-    if command.startswith("add_date"):
+    if command.startswith("add_date") or command.startswith("add_event") or command.startswith("add_time"):
         words = command.split(" ")
         if(len(words) is not 3):
-            response = "Not sure what to do here. Try again with this format: 'add_date [event_name] [MM/DD/YYYY]' or 'add_event [MM/DD/YYY] [event_name]"
+            response = "Not sure what to do here. Try again with this format: 'add_date [event_name] [MM/DD/YYYY]' or 'add_date [MM/DD/YYY] [event_name]"
         else:
+            name = None
             time_obj = None
+
             try:
-                time_obj = datetime.datetime.strptime(words[1], '%m/%d/%Y')
+                time_obj = datetime.strptime(words[1], '%m/%d/%Y')
                 name = words[2]
             except:
                 try:
-                    time_obj = datetime.datetime.strptime(words[2], '%m/%d/%Y')
+                    time_obj = datetime.strptime(words[2], '%m/%d/%Y')
                     name = words[1]
                 except:
                     response = "Please enter a valid date...I can't read that!"
 
-        if([name, time_obj] in times_to_keep):
-            response = "I've already got that in my records!"
-        elif(time_obj is not None):
-            times_to_keep.append([name, time_obj])
-            response = "Thanks! I'll make sure to keep track of " + name
-
-    if command.startswith("del_date"):
+        if name and time_obj:
+            if([name, time_obj] in times_to_keep):
+                response = "I've already got that in my records!"
+            elif(time_obj is not None):
+                times_to_keep.append([name, time_obj])
+                response = "Thanks! I'll make sure to keep track of " + name
+    elif command.startswith("del_date"):
         words = command.split(" ")
         name = words[1]
-        if len(words) > 2:
+        if len(words) is not 2:
             response = "Not a valid input. Try 'del_date [name]'"
         else:
             for sublist in times_to_keep:
@@ -87,10 +88,18 @@ def handle_command(command, channel):
                     del sublist
                     response = name + "deleted."
                     break
+    elif command.startswith("print_dates"):
+        words = command.split(" ")
+        if len(words) is not 1:
+            response = "That's too many arguments! Try '@timekeeper print_dates"
+        else:
+            response = "Here's what I've got: \n"
+            for sublist in times_to_keep:
+                response += (sublist[0] + "\t" + str(sublist[1].date().strftime('%b %d, %Y')) + "\n")
+    else:
+        response = "That's not valid!"
 
-
-
-    # if command.startswith("")
+    ch = channel
 
     # Sends the response back to the channel
     slack_client.api_call(
@@ -98,6 +107,26 @@ def handle_command(command, channel):
         channel=channel,
         text=response or default_response
     )
+
+
+def send_reminders():
+
+    message = "Here's today's reminders: \n"
+
+    for sublist in times_to_keep:
+        difference = (datetime.now() - sublist[1])
+        days = difference.days
+
+        message += sublist[0] + " is " + str(days) + " days away. \n"
+
+    slack_client.api_call(
+        "chat.postMessage",
+        channel=ch,
+        text=message
+    )
+
+
+schedule.every().day.at("19:00").do(send_reminders)
 
 
 if __name__ == "__main__":
@@ -110,5 +139,7 @@ if __name__ == "__main__":
                         if command:
                                 handle_command(command, channel)
                         time.sleep(RTM_READ_DELAY)
+                        schedule.run_pending()
+
         else:
                 print("Connection failed. Exception traceback printed above")
